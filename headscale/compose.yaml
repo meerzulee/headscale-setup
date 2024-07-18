@@ -1,0 +1,31 @@
+services:
+  headscale:
+    container_name: headscale
+    image: headscale/headscale:0.22.3
+    restart: unless-stopped
+    # ports:
+    #   - 8080:8080
+    volumes:
+      - ./container-config:/etc/headscale
+      - ./container-data:/var/lib/headscale
+    entrypoint: headscale serve
+    networks:
+      reverseproxy-nw:
+
+  headscale-ui:
+    container_name: headscale-ui
+    image: ghcr.io/gurucomputing/headscale-ui:latest
+    restart: unless-stopped 
+    networks:
+      reverseproxy-nw:
+      
+  headscale-admin:
+    container_name: headscale-admin
+    image: goodieshq/headscale-admin:latest
+    restart: unless-stopped
+    networks:
+      reverseproxy-nw:
+
+networks:   
+  reverseproxy-nw:
+    external: true  
