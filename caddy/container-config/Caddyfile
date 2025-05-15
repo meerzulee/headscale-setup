@@ -4,7 +4,7 @@ https://domain {
         username <password-hash>
     }           
 
-    reverse_proxy /web* https://headscale-ui {
+    reverse_proxy /web* https://headscale-ui:8443 {
         transport http {
             tls_insecure_skip_verify
         }
