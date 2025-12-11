@@ -1,0 +1,4 @@
+include:
+  - caddy/compose.yaml
+  - headscale/compose.yaml
+  - admin-panel/compose.yaml

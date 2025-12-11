@@ -1,0 +1,16 @@
+services:
+  headscale:
+    ports:
+      - 127.0.0.1:4000:8080
+
+  headscale-ui:
+    ports:
+      - 127.0.0.1:4020:8443
+
+  headscale-admin:
+    ports:
+      - 127.0.0.1:4021:80
+
+  headplane:
+    ports:
+      - 127.0.0.1:4022:3000

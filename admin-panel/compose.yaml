@@ -1,0 +1,38 @@
+services:
+  headscale-ui:
+    container_name: headscale-ui
+    image: ghcr.io/gurucomputing/headscale-ui:latest
+    restart: unless-stopped
+    # ports:
+    #   - 8443:8443
+    networks:
+      reverseproxy-nw:
+
+  headscale-admin:
+    container_name: headscale-admin
+    image: goodieshq/headscale-admin:latest
+    restart: unless-stopped
+    # ports:
+    #   - 80:80
+    networks:
+      reverseproxy-nw:
+
+  headplane:
+    container_name: headplane
+    image: ghcr.io/tale/headplane:latest
+    restart: unless-stopped
+    # ports:
+    #   - 3000:3000
+    group_add:
+      - ${DOCKER_GID:-docker}
+    volumes:
+      - ./container-config/headplane.yaml:/etc/headplane/config.yaml
+      - ./container-data/headplane:/var/lib/headplane
+      - ../headscale/container-config/config.yaml:/etc/headscale/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      reverseproxy-nw:
+
+networks:
+  reverseproxy-nw:
+    external: true
