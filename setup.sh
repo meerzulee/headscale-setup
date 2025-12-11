@@ -15,6 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_CADDY=true
 INSTALL_HEADSCALE=true
 INSTALL_ADMIN=true
+EXPOSE_ADMIN=false
 ADMIN_PANELS=("headscale-ui" "headscale-admin" "headplane")
 
 # Show help
@@ -32,6 +33,8 @@ show_help() {
     echo "  --skip-admin                Skip all admin panels installation"
     echo "  --admin=PANELS              Choose admin panels (comma-separated)"
     echo "                              Available: headscale-ui,headscale-admin,headplane"
+    echo "  --expose-admin              Expose admin panels on localhost"
+    echo "                              headscale-ui:4020, headscale-admin:4021, headplane:4022"
     echo ""
     echo "Examples:"
     echo "  ./setup.sh                                    # Install everything"
@@ -80,6 +83,10 @@ for arg in "$@"; do
             IFS=',' read -ra ADMIN_PANELS <<< "${arg#*=}"
             shift
             ;;
+        --expose-admin)
+            EXPOSE_ADMIN=true
+            shift
+            ;;
         *)
             ;;
     esac
@@ -89,12 +96,13 @@ echo -e "${BLUE}=== Headscale Setup Script ===${NC}\n"
 
 # Show installation plan
 echo -e "${YELLOW}Installation Plan:${NC}"
-echo -e "  Caddy:      $([ "$INSTALL_CADDY" = true ] && echo "${GREEN}Yes${NC}" || echo "${RED}No${NC}")"
-echo -e "  Headscale:  ${GREEN}Yes${NC}"
+echo -e "  Caddy:        $([ "$INSTALL_CADDY" = true ] && echo "${GREEN}Yes${NC}" || echo "${RED}No${NC}")"
+echo -e "  Headscale:    ${GREEN}Yes${NC}"
 if [[ "$INSTALL_ADMIN" = true ]]; then
-    echo -e "  Admin UIs:  ${GREEN}${ADMIN_PANELS[*]}${NC}"
+    echo -e "  Admin UIs:    ${GREEN}${ADMIN_PANELS[*]}${NC}"
+    echo -e "  Expose Admin: $([ "$EXPOSE_ADMIN" = true ] && echo "${GREEN}Yes (localhost:4020-4022)${NC}" || echo "${RED}No${NC}")"
 else
-    echo -e "  Admin UIs:  ${RED}None${NC}"
+    echo -e "  Admin UIs:    ${RED}None${NC}"
 fi
 echo ""
 
@@ -211,19 +219,22 @@ fi
 # Step 7: Start containers
 echo -e "\n${YELLOW}Step 7: Starting containers...${NC}"
 
-if [[ "$INSTALL_CADDY" = true ]]; then
-    echo -e "${BLUE}Starting Caddy...${NC}"
-    docker compose -f "$SCRIPT_DIR/caddy/compose.yaml" up -d
+# Build compose command
+COMPOSE_FILES="-f $SCRIPT_DIR/compose.yaml"
+if [[ "$EXPOSE_ADMIN" = true ]]; then
+    COMPOSE_FILES+=" -f $SCRIPT_DIR/compose.expose-admin.yaml"
 fi
 
-echo -e "${BLUE}Starting Headscale...${NC}"
-docker compose -f "$SCRIPT_DIR/headscale/compose.yaml" up -d
+# Build list of services to start
+SERVICES=""
+
+if [[ "$INSTALL_CADDY" = true ]]; then
+    SERVICES+="caddy "
+fi
+
+SERVICES+="headscale "
 
 if [[ "$INSTALL_ADMIN" = true ]]; then
-    echo -e "${BLUE}Starting Admin Panels...${NC}"
-
-    # Build list of services to start
-    SERVICES=""
     for panel in "${ADMIN_PANELS[@]}"; do
         case $panel in
             headscale-ui)
@@ -237,9 +248,10 @@ if [[ "$INSTALL_ADMIN" = true ]]; then
                 ;;
         esac
     done
-
-    docker compose -f "$SCRIPT_DIR/admin-panel/compose.yaml" up -d $SERVICES
 fi
+
+echo -e "${BLUE}Starting services: ${SERVICES}${NC}"
+docker compose $COMPOSE_FILES up -d $SERVICES
 
 # Wait for headscale to be ready
 echo -e "\n${YELLOW}Waiting for Headscale to be ready...${NC}"
@@ -274,6 +286,23 @@ if [[ "$INSTALL_ADMIN" = true ]]; then
                 ;;
         esac
     done
+    if [[ "$EXPOSE_ADMIN" = true ]]; then
+        echo -e ""
+        echo -e "${GREEN}Localhost ports:${NC}"
+        for panel in "${ADMIN_PANELS[@]}"; do
+            case $panel in
+                headscale-ui)
+                    echo -e "  Headscale UI:    http://localhost:4020"
+                    ;;
+                headscale-admin)
+                    echo -e "  Headscale Admin: http://localhost:4021"
+                    ;;
+                headplane)
+                    echo -e "  Headplane:       http://localhost:4022"
+                    ;;
+            esac
+        done
+    fi
     echo -e ""
 fi
 

@@ -22,7 +22,9 @@ This repository provides a comprehensive setup for configuring **Headscale** wit
 
 ```
 headscale-setup/
-├── setup.sh                 # Automated setup script
+├── setup.sh                   # Automated setup script
+├── compose.yaml               # Main compose (includes all services)
+├── compose.expose-admin.yaml  # Override to expose admin on localhost
 ├── README.md
 ├── caddy/
 │   ├── compose.yaml
@@ -71,11 +73,37 @@ The script will:
 ./setup.sh --admin=headplane
 ./setup.sh --admin=headscale-ui,headplane
 
+# Expose admin panels on localhost (for SSH tunneling, etc.)
+./setup.sh --expose-admin
+
 # Combine options
-./setup.sh --skip-caddy --admin=headplane
+./setup.sh --skip-caddy --admin=headplane --expose-admin
 ```
 
 Available admin panels: `headscale-ui`, `headscale-admin`, `headplane`
+
+### Localhost Ports (with --expose-admin)
+
+| Service | Port |
+|---------|------|
+| headscale-ui | 4020 |
+| headscale-admin | 4021 |
+| headplane | 4022 |
+
+### Using Docker Compose Directly
+
+You can also use docker compose directly:
+
+```bash
+# Start all services
+docker compose up -d
+
+# Start with admin ports exposed
+docker compose -f compose.yaml -f compose.expose-admin.yaml up -d
+
+# Start specific services
+docker compose up -d caddy headscale headplane
+```
 
 ## CLI Shortcuts
 
