@@ -16,7 +16,7 @@ INSTALL_CADDY=true
 INSTALL_HEADSCALE=true
 INSTALL_ADMIN=true
 EXPOSE_LOCALHOST=false
-ADMIN_PANELS=("headscale-ui" "headscale-admin" "headplane")
+ADMIN_PANELS=("headscale-ui" "headplane")
 
 # Show help
 show_help() {
@@ -34,6 +34,8 @@ show_help() {
     echo "  --skip-admin                Skip all admin panels installation"
     echo "  --admin=PANELS              Choose admin panels (comma-separated)"
     echo "                              Available: headscale-ui,headscale-admin,headplane"
+    echo "                              Note: headscale-admin and headplane cannot be"
+    echo "                              used together (both use /admin path)"
     echo "  --expose-localhost          Expose services on localhost"
     echo "                              headscale:4000, headscale-ui:4020,"
     echo "                              headscale-admin:4021, headplane:4022"
@@ -106,6 +108,22 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# Validate admin panel selection - headplane and headscale-admin cannot be used together
+if [[ "$INSTALL_ADMIN" = true ]]; then
+    HAS_HEADPLANE=false
+    HAS_HEADSCALE_ADMIN=false
+    for panel in "${ADMIN_PANELS[@]}"; do
+        [[ "$panel" == "headplane" ]] && HAS_HEADPLANE=true
+        [[ "$panel" == "headscale-admin" ]] && HAS_HEADSCALE_ADMIN=true
+    done
+    if [[ "$HAS_HEADPLANE" = true && "$HAS_HEADSCALE_ADMIN" = true ]]; then
+        echo -e "${RED}Error: Cannot use both 'headplane' and 'headscale-admin' together.${NC}"
+        echo -e "${YELLOW}Both serve on the /admin path and will conflict.${NC}"
+        echo -e "${YELLOW}Please choose one: --admin=headplane or --admin=headscale-admin${NC}"
+        exit 1
+    fi
+fi
 
 echo -e "${BLUE}=== Headscale Setup Script ===${NC}\n"
 
@@ -205,31 +223,31 @@ sed -i "s|^server_url:.*|server_url: https://${DOMAIN}|" "$SCRIPT_DIR/headscale/
 echo -e "${GREEN}Headscale config updated.${NC}"
 
 # Step 6: Configure Headplane (only if headplane is selected)
-if [[ "$INSTALL_ADMIN" = true && " ${ADMIN_PANELS[*]} " =~ " headplane " ]]; then
-    echo -e "\n${YELLOW}Step 6: Configuring Headplane...${NC}"
-    cat > "$SCRIPT_DIR/admin-panel/container-config/headplane.yaml" << EOF
-server:
-  host: "0.0.0.0"
-  port: 3000
-  base_url: "https://${DOMAIN}"
-  cookie_secret: "${COOKIE_SECRET}"
-  cookie_secure: true
-  cookie_max_age: 86400
-  data_path: "/var/lib/headplane"
-
-headscale:
-  url: "http://headscale:8080"
-  config_path: "/etc/headscale/config.yaml"
-  config_strict: false
-
-integration:
-  docker:
-    enabled: true
-    container_label: "me.tale.headplane.target=headscale"
-    socket: "unix:///var/run/docker.sock"
-EOF
-    echo -e "${GREEN}Headplane config created.${NC}"
-fi
+# if [[ "$INSTALL_ADMIN" = true && " ${ADMIN_PANELS[*]} " =~ " headplane " ]]; then
+#     echo -e "\n${YELLOW}Step 6: Configuring Headplane...${NC}"
+#     cat > "$SCRIPT_DIR/admin-panel/container-config/headplane.yaml" << EOF
+# server:
+#   host: "0.0.0.0"
+#   port: 3000
+#   base_url: "https://${DOMAIN}"
+#   cookie_secret: "${COOKIE_SECRET}"
+#   cookie_secure: true
+#   cookie_max_age: 86400
+#   data_path: "/var/lib/headplane"
+#
+# headscale:
+#   url: "http://headscale:8080"
+#   config_path: "/etc/headscale/config.yaml"
+#   config_strict: false
+#
+# integration:
+#   docker:
+#     enabled: true
+#     container_label: "me.tale.headplane.target=headscale"
+#     socket: "unix:///var/run/docker.sock"
+# EOF
+#     echo -e "${GREEN}Headplane config created.${NC}"
+# fi
 
 # Step 7: Start containers
 echo -e "\n${YELLOW}Step 7: Starting containers...${NC}"
