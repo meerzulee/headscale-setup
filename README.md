@@ -55,6 +55,37 @@ The script will:
 6. Start all containers
 7. Generate and display an API key
 
+## CLI Shortcuts
+
+The setup script provides shortcuts for common headscale commands:
+
+```bash
+# Run any headscale command
+./setup.sh headscale <command>
+
+# Generate a new API key
+./setup.sh apikey
+
+# Show help
+./setup.sh help
+```
+
+Examples:
+
+```bash
+# List users
+./setup.sh headscale users list
+
+# List nodes
+./setup.sh headscale nodes list
+
+# Create a pre-auth key
+./setup.sh headscale preauthkeys create --user default
+
+# Create a new user
+./setup.sh headscale users create myuser
+```
+
 ## Manual Setup
 
 If you prefer manual configuration:

@@ -11,6 +11,37 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Check if running as headscale shorthand
+if [[ "$1" == "headscale" ]]; then
+    shift
+    docker exec headscale headscale "$@"
+    exit 0
+fi
+
+# Check if running as apikey shorthand
+if [[ "$1" == "apikey" ]]; then
+    docker exec headscale headscale apikeys create
+    exit 0
+fi
+
+# Show help
+if [[ "$1" == "help" || "$1" == "--help" || "$1" == "-h" ]]; then
+    echo -e "${BLUE}Headscale Setup Script${NC}"
+    echo ""
+    echo "Usage:"
+    echo "  ./setup.sh              Run the setup wizard"
+    echo "  ./setup.sh headscale    Shorthand for 'docker exec headscale headscale'"
+    echo "  ./setup.sh apikey       Generate a new API key"
+    echo "  ./setup.sh help         Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  ./setup.sh headscale users list"
+    echo "  ./setup.sh headscale nodes list"
+    echo "  ./setup.sh headscale preauthkeys create --user default"
+    echo "  ./setup.sh apikey"
+    exit 0
+fi
+
 echo -e "${BLUE}=== Headscale Setup Script ===${NC}\n"
 
 # Step 1: Create Docker network
@@ -153,3 +184,4 @@ echo -e "${GREEN}API Key (save this somewhere safe):${NC}"
 echo -e "${YELLOW}${API_KEY}${NC}"
 echo -e ""
 echo -e "${YELLOW}Note: Use this API key to log into all admin UIs.${NC}"
+echo -e "${YELLOW}Tip: Use './setup.sh headscale <command>' to run headscale CLI commands.${NC}"
