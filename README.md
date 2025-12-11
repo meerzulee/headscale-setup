@@ -1,46 +1,97 @@
 # Headscale Setup
 
-This repository provides a comprehensive setup for configuring **Headscale** with **Caddy** for reverse proxy and Headscale Admin web-apps for efficient management. The setup is based on the detailed guide available [here](https://blog.gurucomputing.com.au/Smart%20VPNS%20with%20Headscale/Introduction/).
+This repository provides a comprehensive setup for configuring **Headscale** with **Caddy** for reverse proxy and multiple admin web UIs for efficient management. The setup is based on the detailed guide available [here](https://blog.gurucomputing.com.au/Smart%20VPNS%20with%20Headscale/Introduction/).
 
 ## Features
 
-- **Docker Network Configuration**: Easily set up a Docker network for seamless communication between containers.
-- **Caddy Integration**: Secure and configure your Headscale instance with Caddy as the reverse proxy, including optional Basic Auth for additional security.
-- **Headscale Configuration**: Customize your Headscale setup with a simple configuration file.
-- **Admin UIs**: Two powerful admin UI projects ([headscale-ui](https://github.com/gurucomputing/headscale-ui) and [headscale-admin](https://github.com/GoodiesHQ/headscale-admin)) for managing your Headscale instance efficiently.
+- **Automated Setup Script**: Run a single script to configure everything
+- **Docker Network Configuration**: Easily set up a Docker network for seamless communication between containers
+- **Caddy Integration**: Secure and configure your Headscale instance with Caddy as the reverse proxy, including Basic Auth for additional security
+- **Headscale Configuration**: Customize your Headscale setup with a simple configuration file
+- **Multiple Admin UIs**: Three admin UI options for managing your Headscale instance
 
-## Getting Started
+## Admin UIs
 
-1. **Create Docker Network**: 
-   ```bash 
+| UI | Path | Repository |
+|----|------|------------|
+| Headscale UI | `/web` | [gurucomputing/headscale-ui](https://github.com/gurucomputing/headscale-ui) |
+| Headscale Admin | `/admin` | [GoodiesHQ/headscale-admin](https://github.com/GoodiesHQ/headscale-admin) |
+| Headplane | `/headplane` | [tale/headplane](https://github.com/tale/headplane) |
+
+## Project Structure
+
+```
+headscale-setup/
+├── setup.sh                 # Automated setup script
+├── README.md
+├── caddy/
+│   ├── compose.yaml
+│   └── container-config/
+│       └── Caddyfile
+├── headscale/
+│   ├── compose.yaml
+│   └── container-config/
+│       └── config.yaml
+└── admin-panel/
+    ├── compose.yaml
+    └── container-config/
+        └── headplane.yaml
+```
+
+## Quick Start
+
+Run the setup script:
+
+```bash
+./setup.sh
+```
+
+The script will:
+1. Create Docker network `reverseproxy-nw`
+2. Ask for your domain
+3. Ask for username and password (for Basic Auth)
+4. Generate password hash and configure Caddyfile
+5. Configure Headscale and Headplane
+6. Start all containers
+7. Generate and display an API key
+
+## Manual Setup
+
+If you prefer manual configuration:
+
+1. **Create Docker Network**:
+   ```bash
    docker network create reverseproxy-nw
-   ``` 
+   ```
+
 2. **Caddy Setup**:
-   - Replace `domain` with your actual domain in the `Caddyfile`.
-   - Optionally, secure `/web` and `/admin` paths with Basic Auth:
+   - Replace `domain` with your actual domain in `caddy/container-config/Caddyfile`
+   - Generate password hash:
      ```bash
-     caddy hash-password -p <password>
+     docker run --rm caddy:latest caddy hash-password --plaintext <password>
      ```
-     Add your username and hashed password to the `Caddyfile`.
+   - Add your username and hashed password to the `Caddyfile`
 
 3. **Headscale Setup**:
-   - Update `config.yaml` with your domain details.
+   - Update `headscale/container-config/config.yaml` with your domain
 
-4. **Admin UIs Configuration**:
-   - Generate API keys for both admin UI projects:
-     ```bash
-     docker exec headscale headscale apikeys create
-     ```
-   - Use the generated API keys in the configurations of [headscale-ui](https://github.com/gurucomputing/headscale-ui) and [headscale-admin](https://github.com/GoodiesHQ/headscale-admin).
+4. **Headplane Setup**:
+   - Update `admin-panel/container-config/headplane.yaml` with your domain
+   - Generate a 32-character cookie secret
 
-## Contribution
+5. **Start Containers**:
+   ```bash
+   docker compose -f caddy/compose.yaml up -d
+   docker compose -f headscale/compose.yaml up -d
+   docker compose -f admin-panel/compose.yaml up -d
+   ```
 
-Feel free to contribute by opening issues or submitting pull requests. For major changes, please open an issue first to discuss what you would like to change.
+6. **Generate API Key**:
+   ```bash
+   docker exec headscale headscale apikeys create
+   ```
+   Use this API key to authenticate in the admin UIs.
 
 ## License
 
 This project is licensed under the MIT License.
-
----
-
-Let me know if you need any more details or further adjustments!
