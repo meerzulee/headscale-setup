@@ -182,11 +182,12 @@ if [[ "$INSTALL_CADDY" = true ]]; then
                     CADDYFILE+="\n    reverse_proxy /web* https://headscale-ui:8443 {\n        transport http {\n            tls_insecure_skip_verify\n        }\n    }\n"
                     ;;
                 headscale-admin)
-                    CADDYFILE+="\n    basicauth /admin* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
-                    CADDYFILE+="\n    reverse_proxy /admin* headscale-admin:80\n"
+                    CADDYFILE+="\n    basicauth /hs-admin* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
+                    CADDYFILE+="\n    reverse_proxy /hs-admin* headscale-admin:80\n"
                     ;;
                 headplane)
-                    CADDYFILE+="\n    handle_path /headplane* {\n        basicauth {\n            ${USERNAME} ${PASSWORD_HASH}\n        }\n        rewrite * /admin{uri}\n        reverse_proxy http://headplane:3000\n    }\n"
+                    CADDYFILE+="\n    basicauth /admin* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
+                    CADDYFILE+="\n    reverse_proxy /admin* http://headplane:3000\n"
                     ;;
             esac
         done
@@ -294,10 +295,10 @@ if [[ "$INSTALL_ADMIN" = true ]]; then
                 echo -e "  Headscale UI:    https://${DOMAIN}/web"
                 ;;
             headscale-admin)
-                echo -e "  Headscale Admin: https://${DOMAIN}/admin"
+                echo -e "  Headscale Admin: https://${DOMAIN}/hs-admin"
                 ;;
             headplane)
-                echo -e "  Headplane:       https://${DOMAIN}/headplane"
+                echo -e "  Headplane:       https://${DOMAIN}/admin"
                 ;;
         esac
     done

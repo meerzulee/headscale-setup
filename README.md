@@ -15,8 +15,8 @@ This repository provides a comprehensive setup for configuring **Headscale** wit
 | UI | Path | Repository |
 |----|------|------------|
 | Headscale UI | `/web` | [gurucomputing/headscale-ui](https://github.com/gurucomputing/headscale-ui) |
-| Headscale Admin | `/admin` | [GoodiesHQ/headscale-admin](https://github.com/GoodiesHQ/headscale-admin) |
-| Headplane | `/headplane` | [tale/headplane](https://github.com/tale/headplane) |
+| Headscale Admin | `/hs-admin` | [GoodiesHQ/headscale-admin](https://github.com/GoodiesHQ/headscale-admin) |
+| Headplane | `/admin` | [tale/headplane](https://github.com/tale/headplane) |
 
 ## Project Structure
 

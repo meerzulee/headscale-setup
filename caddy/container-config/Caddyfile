@@ -10,19 +10,17 @@ https://domain {
         }
     }
 
+    basicauth /hs-admin* {
+        username <password-hash>
+    }
+
+    reverse_proxy /hs-admin* headscale-admin:80
+
     basicauth /admin* {
         username <password-hash>
     }
 
-    reverse_proxy /admin* headscale-admin:80
-
-    handle_path /headplane* {
-        basicauth {
-            username <password-hash>
-        }
-        rewrite * /admin{uri}
-        reverse_proxy http://headplane:3000
-    }
+    reverse_proxy /admin* http://headplane:3000
 
     reverse_proxy * http://headscale:8080
 }
