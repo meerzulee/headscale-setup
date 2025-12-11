@@ -73,7 +73,7 @@ if [[ "$1" == "hash" ]]; then
     else
         PASSWORD="$2"
     fi
-    docker run --rm caddy:latest caddy hash-password --plaintext "$PASSWORD"
+    mkpasswd -m bcrypt "$PASSWORD"
     exit 0
 fi
 
@@ -156,9 +156,9 @@ if [[ "$INSTALL_CADDY" = true && "$INSTALL_ADMIN" = true ]]; then
         exit 1
     fi
 
-    # Generate password hash using caddy
+    # Generate password hash using mkpasswd
     echo -e "\n${YELLOW}Generating password hash...${NC}"
-    PASSWORD_HASH=$(docker run --rm caddy:latest caddy hash-password --plaintext "$PASSWORD")
+    PASSWORD_HASH=$(mkpasswd -m bcrypt "$PASSWORD")
     echo -e "${GREEN}Password hash generated.${NC}"
 fi
 
