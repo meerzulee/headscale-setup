@@ -86,6 +86,19 @@ Examples:
 ./setup.sh headscale users create myuser
 ```
 
+## Cloudflare DNS Configuration
+
+If you're using Cloudflare for DNS, make sure to:
+
+1. Create an **A record** pointing your domain to your server IP
+2. **Disable the proxy** (orange cloud off / DNS only)
+
+| Type | Name | Content | Proxy status |
+|------|------|---------|--------------|
+| A | headscale | your.server.ip | DNS only (grey cloud) |
+
+> **Important**: Cloudflare proxy must be disabled because Headscale uses custom protocols that don't work through Cloudflare's proxy.
+
 ## Manual Setup
 
 If you prefer manual configuration:
