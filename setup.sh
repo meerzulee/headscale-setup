@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_CADDY=true
 INSTALL_HEADSCALE=true
 INSTALL_ADMIN=true
-EXPOSE_ADMIN=false
+EXPOSE_LOCALHOST=false
 ADMIN_PANELS=("headscale-ui" "headscale-admin" "headplane")
 
 # Show help
@@ -34,8 +34,9 @@ show_help() {
     echo "  --skip-admin                Skip all admin panels installation"
     echo "  --admin=PANELS              Choose admin panels (comma-separated)"
     echo "                              Available: headscale-ui,headscale-admin,headplane"
-    echo "  --expose-admin              Expose admin panels on localhost"
-    echo "                              headscale-ui:4020, headscale-admin:4021, headplane:4022"
+    echo "  --expose-localhost          Expose services on localhost"
+    echo "                              headscale:4000, headscale-ui:4020,"
+    echo "                              headscale-admin:4021, headplane:4022"
     echo ""
     echo "Examples:"
     echo "  ./setup.sh                                    # Install everything"
@@ -97,8 +98,8 @@ for arg in "$@"; do
             IFS=',' read -ra ADMIN_PANELS <<< "${arg#*=}"
             shift
             ;;
-        --expose-admin)
-            EXPOSE_ADMIN=true
+        --expose-localhost)
+            EXPOSE_LOCALHOST=true
             shift
             ;;
         *)
@@ -114,10 +115,10 @@ echo -e "  Caddy:        $([ "$INSTALL_CADDY" = true ] && echo "${GREEN}Yes${NC}
 echo -e "  Headscale:    ${GREEN}Yes${NC}"
 if [[ "$INSTALL_ADMIN" = true ]]; then
     echo -e "  Admin UIs:    ${GREEN}${ADMIN_PANELS[*]}${NC}"
-    echo -e "  Expose Admin: $([ "$EXPOSE_ADMIN" = true ] && echo "${GREEN}Yes (localhost:4020-4022)${NC}" || echo "${RED}No${NC}")"
 else
     echo -e "  Admin UIs:    ${RED}None${NC}"
 fi
+echo -e "  Expose Local: $([ "$EXPOSE_LOCALHOST" = true ] && echo "${GREEN}Yes${NC}" || echo "${RED}No${NC}")"
 echo ""
 
 # Step 1: Create Docker network
@@ -235,8 +236,8 @@ echo -e "\n${YELLOW}Step 7: Starting containers...${NC}"
 
 # Build compose command
 COMPOSE_FILES="-f $SCRIPT_DIR/compose.yaml"
-if [[ "$EXPOSE_ADMIN" = true ]]; then
-    COMPOSE_FILES+=" -f $SCRIPT_DIR/compose.expose-admin.yaml"
+if [[ "$EXPOSE_LOCALHOST" = true ]]; then
+    COMPOSE_FILES+=" -f $SCRIPT_DIR/compose.expose-localhost.yaml"
 fi
 
 # Build list of services to start
@@ -300,9 +301,13 @@ if [[ "$INSTALL_ADMIN" = true ]]; then
                 ;;
         esac
     done
-    if [[ "$EXPOSE_ADMIN" = true ]]; then
-        echo -e ""
-        echo -e "${GREEN}Localhost ports:${NC}"
+    echo -e ""
+fi
+
+if [[ "$EXPOSE_LOCALHOST" = true ]]; then
+    echo -e "${GREEN}Localhost ports:${NC}"
+    echo -e "  Headscale:       http://localhost:4000"
+    if [[ "$INSTALL_ADMIN" = true ]]; then
         for panel in "${ADMIN_PANELS[@]}"; do
             case $panel in
                 headscale-ui)
