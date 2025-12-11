@@ -96,6 +96,9 @@ Available admin panels: `headscale-ui`, `headscale-admin`, `headplane`
 You can also use docker compose directly:
 
 ```bash
+# Set DOCKER_GID for headplane docker socket access
+export DOCKER_GID=$(getent group docker | cut -d: -f3)
+
 # Start all services
 docker compose up -d
 

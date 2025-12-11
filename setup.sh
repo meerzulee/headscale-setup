@@ -266,6 +266,7 @@ if [[ "$INSTALL_ADMIN" = true ]]; then
 fi
 
 echo -e "${BLUE}Starting services: ${SERVICES}${NC}"
+export DOCKER_GID=$(getent group docker | cut -d: -f3)
 docker compose $COMPOSE_FILES up -d $SERVICES
 
 # Wait for headscale to be ready

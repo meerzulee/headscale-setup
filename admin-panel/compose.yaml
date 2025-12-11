@@ -23,6 +23,8 @@ services:
     restart: unless-stopped
     # ports:
     #   - 3000:3000
+    group_add:
+      - ${DOCKER_GID:-docker}
     volumes:
       - ./container-config/headplane.yaml:/etc/headplane/config.yaml
       - ./container-data/headplane:/var/lib/headplane
