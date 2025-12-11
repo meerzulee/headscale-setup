@@ -28,15 +28,15 @@ show_help() {
     echo "  ./setup.sh help             Show this help message"
     echo ""
     echo "Options:"
-    echo "  --no-caddy                  Skip Caddy installation"
-    echo "  --no-admin                  Skip all admin panels installation"
+    echo "  --skip-caddy                Skip Caddy installation"
+    echo "  --skip-admin                Skip all admin panels installation"
     echo "  --admin=PANELS              Choose admin panels (comma-separated)"
     echo "                              Available: headscale-ui,headscale-admin,headplane"
     echo ""
     echo "Examples:"
     echo "  ./setup.sh                                    # Install everything"
-    echo "  ./setup.sh --no-caddy                         # Skip Caddy"
-    echo "  ./setup.sh --no-admin                         # Skip admin panels"
+    echo "  ./setup.sh --skip-caddy                       # Skip Caddy"
+    echo "  ./setup.sh --skip-admin                       # Skip admin panels"
     echo "  ./setup.sh --admin=headplane                  # Only install Headplane"
     echo "  ./setup.sh --admin=headscale-ui,headplane     # Install specific panels"
     echo ""
@@ -68,11 +68,11 @@ fi
 # Parse arguments
 for arg in "$@"; do
     case $arg in
-        --no-caddy)
+        --skip-caddy)
             INSTALL_CADDY=false
             shift
             ;;
-        --no-admin)
+        --skip-admin)
             INSTALL_ADMIN=false
             shift
             ;;

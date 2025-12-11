@@ -62,17 +62,17 @@ The script will:
 ./setup.sh
 
 # Skip Caddy installation (if you have your own reverse proxy)
-./setup.sh --no-caddy
+./setup.sh --skip-caddy
 
 # Skip all admin panels
-./setup.sh --no-admin
+./setup.sh --skip-admin
 
 # Install only specific admin panels
 ./setup.sh --admin=headplane
 ./setup.sh --admin=headscale-ui,headplane
 
 # Combine options
-./setup.sh --no-caddy --admin=headplane
+./setup.sh --skip-caddy --admin=headplane
 ```
 
 Available admin panels: `headscale-ui`, `headscale-admin`, `headplane`
