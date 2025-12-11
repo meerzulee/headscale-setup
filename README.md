@@ -116,6 +116,9 @@ The setup script provides shortcuts for common headscale commands:
 # Generate a new API key
 ./setup.sh apikey
 
+# Generate password hash for Caddyfile
+./setup.sh hash [password]
+
 # Show help
 ./setup.sh help
 ```
@@ -134,6 +137,9 @@ Examples:
 
 # Create a new user
 ./setup.sh headscale users create myuser
+
+# Generate password hash
+./setup.sh hash mypassword
 ```
 
 ## Cloudflare DNS Configuration

@@ -26,6 +26,7 @@ show_help() {
     echo "  ./setup.sh [options]        Run the setup wizard"
     echo "  ./setup.sh headscale        Shorthand for 'docker exec headscale headscale'"
     echo "  ./setup.sh apikey           Generate a new API key"
+    echo "  ./setup.sh hash [password]  Generate password hash for Caddyfile"
     echo "  ./setup.sh help             Show this help message"
     echo ""
     echo "Options:"
@@ -47,6 +48,7 @@ show_help() {
     echo "  ./setup.sh headscale nodes list"
     echo "  ./setup.sh headscale preauthkeys create --user default"
     echo "  ./setup.sh apikey"
+    echo "  ./setup.sh hash mypassword"
     exit 0
 }
 
@@ -60,6 +62,18 @@ fi
 # Check if running as apikey shorthand
 if [[ "$1" == "apikey" ]]; then
     docker exec headscale headscale apikeys create
+    exit 0
+fi
+
+# Check if running as hash shorthand
+if [[ "$1" == "hash" ]]; then
+    if [[ -z "$2" ]]; then
+        read -s -p "Enter password to hash: " PASSWORD
+        echo ""
+    else
+        PASSWORD="$2"
+    fi
+    docker run --rm caddy:latest caddy hash-password --plaintext "$PASSWORD"
     exit 0
 fi
 
