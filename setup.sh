@@ -11,6 +11,42 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Default values
+INSTALL_CADDY=true
+INSTALL_HEADSCALE=true
+INSTALL_ADMIN=true
+ADMIN_PANELS=("headscale-ui" "headscale-admin" "headplane")
+
+# Show help
+show_help() {
+    echo -e "${BLUE}Headscale Setup Script${NC}"
+    echo ""
+    echo "Usage:"
+    echo "  ./setup.sh [options]        Run the setup wizard"
+    echo "  ./setup.sh headscale        Shorthand for 'docker exec headscale headscale'"
+    echo "  ./setup.sh apikey           Generate a new API key"
+    echo "  ./setup.sh help             Show this help message"
+    echo ""
+    echo "Options:"
+    echo "  --no-caddy                  Skip Caddy installation"
+    echo "  --no-admin                  Skip all admin panels installation"
+    echo "  --admin=PANELS              Choose admin panels (comma-separated)"
+    echo "                              Available: headscale-ui,headscale-admin,headplane"
+    echo ""
+    echo "Examples:"
+    echo "  ./setup.sh                                    # Install everything"
+    echo "  ./setup.sh --no-caddy                         # Skip Caddy"
+    echo "  ./setup.sh --no-admin                         # Skip admin panels"
+    echo "  ./setup.sh --admin=headplane                  # Only install Headplane"
+    echo "  ./setup.sh --admin=headscale-ui,headplane     # Install specific panels"
+    echo ""
+    echo "  ./setup.sh headscale users list"
+    echo "  ./setup.sh headscale nodes list"
+    echo "  ./setup.sh headscale preauthkeys create --user default"
+    echo "  ./setup.sh apikey"
+    exit 0
+}
+
 # Check if running as headscale shorthand
 if [[ "$1" == "headscale" ]]; then
     shift
@@ -26,23 +62,41 @@ fi
 
 # Show help
 if [[ "$1" == "help" || "$1" == "--help" || "$1" == "-h" ]]; then
-    echo -e "${BLUE}Headscale Setup Script${NC}"
-    echo ""
-    echo "Usage:"
-    echo "  ./setup.sh              Run the setup wizard"
-    echo "  ./setup.sh headscale    Shorthand for 'docker exec headscale headscale'"
-    echo "  ./setup.sh apikey       Generate a new API key"
-    echo "  ./setup.sh help         Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  ./setup.sh headscale users list"
-    echo "  ./setup.sh headscale nodes list"
-    echo "  ./setup.sh headscale preauthkeys create --user default"
-    echo "  ./setup.sh apikey"
-    exit 0
+    show_help
 fi
 
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --no-caddy)
+            INSTALL_CADDY=false
+            shift
+            ;;
+        --no-admin)
+            INSTALL_ADMIN=false
+            shift
+            ;;
+        --admin=*)
+            IFS=',' read -ra ADMIN_PANELS <<< "${arg#*=}"
+            shift
+            ;;
+        *)
+            ;;
+    esac
+done
+
 echo -e "${BLUE}=== Headscale Setup Script ===${NC}\n"
+
+# Show installation plan
+echo -e "${YELLOW}Installation Plan:${NC}"
+echo -e "  Caddy:      $([ "$INSTALL_CADDY" = true ] && echo "${GREEN}Yes${NC}" || echo "${RED}No${NC}")"
+echo -e "  Headscale:  ${GREEN}Yes${NC}"
+if [[ "$INSTALL_ADMIN" = true ]]; then
+    echo -e "  Admin UIs:  ${GREEN}${ADMIN_PANELS[*]}${NC}"
+else
+    echo -e "  Admin UIs:  ${RED}None${NC}"
+fi
+echo ""
 
 # Step 1: Create Docker network
 echo -e "${YELLOW}Step 1: Creating Docker network...${NC}"
@@ -62,71 +116,75 @@ if [[ -z "$DOMAIN" ]]; then
     exit 1
 fi
 
-# Step 3: Ask for username and password for basic auth
-echo -e "\n${YELLOW}Step 3: Basic Auth Configuration${NC}"
-read -p "Enter username for web UI basic auth: " USERNAME
+# Step 3: Ask for username and password for basic auth (only if caddy or admin is installed)
+if [[ "$INSTALL_CADDY" = true && "$INSTALL_ADMIN" = true ]]; then
+    echo -e "\n${YELLOW}Step 3: Basic Auth Configuration${NC}"
+    read -p "Enter username for web UI basic auth: " USERNAME
 
-if [[ -z "$USERNAME" ]]; then
-    echo -e "${RED}Error: Username cannot be empty.${NC}"
-    exit 1
+    if [[ -z "$USERNAME" ]]; then
+        echo -e "${RED}Error: Username cannot be empty.${NC}"
+        exit 1
+    fi
+
+    read -s -p "Enter password for basic auth: " PASSWORD
+    echo ""
+
+    if [[ -z "$PASSWORD" ]]; then
+        echo -e "${RED}Error: Password cannot be empty.${NC}"
+        exit 1
+    fi
+
+    # Generate password hash using caddy
+    echo -e "\n${YELLOW}Generating password hash...${NC}"
+    PASSWORD_HASH=$(docker run --rm caddy:latest caddy hash-password --plaintext "$PASSWORD")
+    echo -e "${GREEN}Password hash generated.${NC}"
 fi
-
-read -s -p "Enter password for basic auth: " PASSWORD
-echo ""
-
-if [[ -z "$PASSWORD" ]]; then
-    echo -e "${RED}Error: Password cannot be empty.${NC}"
-    exit 1
-fi
-
-# Generate password hash using caddy
-echo -e "\n${YELLOW}Generating password hash...${NC}"
-PASSWORD_HASH=$(docker run --rm caddy:latest caddy hash-password --plaintext "$PASSWORD")
-echo -e "${GREEN}Password hash generated.${NC}"
 
 # Generate cookie secret for headplane (32 characters)
 COOKIE_SECRET=$(openssl rand -hex 16)
 
-# Step 4: Update Caddyfile
-echo -e "\n${YELLOW}Step 4: Configuring Caddyfile...${NC}"
-cat > "$SCRIPT_DIR/caddy/container-config/Caddyfile" << EOF
-https://${DOMAIN} {
+# Step 4: Update Caddyfile (only if caddy is installed)
+if [[ "$INSTALL_CADDY" = true ]]; then
+    echo -e "\n${YELLOW}Step 4: Configuring Caddyfile...${NC}"
 
-    basicauth /web* {
-        ${USERNAME} ${PASSWORD_HASH}
-    }
+    # Start building Caddyfile
+    CADDYFILE="https://${DOMAIN} {\n"
 
-    reverse_proxy /web* https://headscale-ui:8443 {
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
+    # Add routes for selected admin panels
+    if [[ "$INSTALL_ADMIN" = true ]]; then
+        for panel in "${ADMIN_PANELS[@]}"; do
+            case $panel in
+                headscale-ui)
+                    CADDYFILE+="\n    basicauth /web* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
+                    CADDYFILE+="\n    reverse_proxy /web* https://headscale-ui:8443 {\n        transport http {\n            tls_insecure_skip_verify\n        }\n    }\n"
+                    ;;
+                headscale-admin)
+                    CADDYFILE+="\n    basicauth /admin* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
+                    CADDYFILE+="\n    reverse_proxy /admin* headscale-admin:80\n"
+                    ;;
+                headplane)
+                    CADDYFILE+="\n    basicauth /headplane* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
+                    CADDYFILE+="\n    reverse_proxy /headplane* http://headplane:3000\n"
+                    ;;
+            esac
+        done
+    fi
 
-    basicauth /admin* {
-        ${USERNAME} ${PASSWORD_HASH}
-    }
+    CADDYFILE+="\n    reverse_proxy * http://headscale:8080\n}"
 
-    reverse_proxy /admin* headscale-admin:80
-
-    basicauth /headplane* {
-        ${USERNAME} ${PASSWORD_HASH}
-    }
-
-    reverse_proxy /headplane* http://headplane:3000
-
-    reverse_proxy * http://headscale:8080
-}
-EOF
-echo -e "${GREEN}Caddyfile configured.${NC}"
+    echo -e "$CADDYFILE" > "$SCRIPT_DIR/caddy/container-config/Caddyfile"
+    echo -e "${GREEN}Caddyfile configured.${NC}"
+fi
 
 # Step 5: Update Headscale config
 echo -e "\n${YELLOW}Step 5: Configuring Headscale...${NC}"
 sed -i "s|^server_url:.*|server_url: https://${DOMAIN}|" "$SCRIPT_DIR/headscale/container-config/config.yaml"
 echo -e "${GREEN}Headscale config updated.${NC}"
 
-# Step 6: Configure Headplane
-echo -e "\n${YELLOW}Step 6: Configuring Headplane...${NC}"
-cat > "$SCRIPT_DIR/admin-panel/container-config/headplane.yaml" << EOF
+# Step 6: Configure Headplane (only if headplane is selected)
+if [[ "$INSTALL_ADMIN" = true && " ${ADMIN_PANELS[*]} " =~ " headplane " ]]; then
+    echo -e "\n${YELLOW}Step 6: Configuring Headplane...${NC}"
+    cat > "$SCRIPT_DIR/admin-panel/container-config/headplane.yaml" << EOF
 server:
   host: "0.0.0.0"
   port: 3000
@@ -147,18 +205,41 @@ integration:
     container_label: "me.tale.headplane.target=headscale"
     socket: "unix:///var/run/docker.sock"
 EOF
-echo -e "${GREEN}Headplane config created.${NC}"
+    echo -e "${GREEN}Headplane config created.${NC}"
+fi
 
 # Step 7: Start containers
 echo -e "\n${YELLOW}Step 7: Starting containers...${NC}"
-echo -e "${BLUE}Starting Caddy...${NC}"
-docker compose -f "$SCRIPT_DIR/caddy/compose.yaml" up -d
+
+if [[ "$INSTALL_CADDY" = true ]]; then
+    echo -e "${BLUE}Starting Caddy...${NC}"
+    docker compose -f "$SCRIPT_DIR/caddy/compose.yaml" up -d
+fi
 
 echo -e "${BLUE}Starting Headscale...${NC}"
 docker compose -f "$SCRIPT_DIR/headscale/compose.yaml" up -d
 
-echo -e "${BLUE}Starting Admin Panels...${NC}"
-docker compose -f "$SCRIPT_DIR/admin-panel/compose.yaml" up -d
+if [[ "$INSTALL_ADMIN" = true ]]; then
+    echo -e "${BLUE}Starting Admin Panels...${NC}"
+
+    # Build list of services to start
+    SERVICES=""
+    for panel in "${ADMIN_PANELS[@]}"; do
+        case $panel in
+            headscale-ui)
+                SERVICES+="headscale-ui "
+                ;;
+            headscale-admin)
+                SERVICES+="headscale-admin "
+                ;;
+            headplane)
+                SERVICES+="headplane "
+                ;;
+        esac
+    done
+
+    docker compose -f "$SCRIPT_DIR/admin-panel/compose.yaml" up -d $SERVICES
+fi
 
 # Wait for headscale to be ready
 echo -e "\n${YELLOW}Waiting for Headscale to be ready...${NC}"
@@ -173,13 +254,29 @@ echo -e "${GREEN}API Key generated successfully!${NC}"
 echo -e "\n${BLUE}=== Setup Complete ===${NC}"
 echo -e "\n${GREEN}Configuration Summary:${NC}"
 echo -e "  Domain:      https://${DOMAIN}"
-echo -e "  Username:    ${USERNAME}"
+if [[ "$INSTALL_CADDY" = true && "$INSTALL_ADMIN" = true ]]; then
+    echo -e "  Username:    ${USERNAME}"
+fi
 echo -e ""
-echo -e "${GREEN}Admin UIs (all protected by basic auth):${NC}"
-echo -e "  Headscale UI:    https://${DOMAIN}/web"
-echo -e "  Headscale Admin: https://${DOMAIN}/admin"
-echo -e "  Headplane:       https://${DOMAIN}/headplane"
-echo -e ""
+
+if [[ "$INSTALL_ADMIN" = true ]]; then
+    echo -e "${GREEN}Admin UIs (all protected by basic auth):${NC}"
+    for panel in "${ADMIN_PANELS[@]}"; do
+        case $panel in
+            headscale-ui)
+                echo -e "  Headscale UI:    https://${DOMAIN}/web"
+                ;;
+            headscale-admin)
+                echo -e "  Headscale Admin: https://${DOMAIN}/admin"
+                ;;
+            headplane)
+                echo -e "  Headplane:       https://${DOMAIN}/headplane"
+                ;;
+        esac
+    done
+    echo -e ""
+fi
+
 echo -e "${GREEN}API Key (save this somewhere safe):${NC}"
 echo -e "${YELLOW}${API_KEY}${NC}"
 echo -e ""

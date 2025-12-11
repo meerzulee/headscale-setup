@@ -55,6 +55,28 @@ The script will:
 6. Start all containers
 7. Generate and display an API key
 
+## Setup Options
+
+```bash
+# Install everything (default)
+./setup.sh
+
+# Skip Caddy installation (if you have your own reverse proxy)
+./setup.sh --no-caddy
+
+# Skip all admin panels
+./setup.sh --no-admin
+
+# Install only specific admin panels
+./setup.sh --admin=headplane
+./setup.sh --admin=headscale-ui,headplane
+
+# Combine options
+./setup.sh --no-caddy --admin=headplane
+```
+
+Available admin panels: `headscale-ui`, `headscale-admin`, `headplane`
+
 ## CLI Shortcuts
 
 The setup script provides shortcuts for common headscale commands:
