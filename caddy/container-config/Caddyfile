@@ -2,7 +2,7 @@ https://domain {
 
     basicauth /web* {
         username <password-hash>
-    }           
+    }
 
     reverse_proxy /web* https://headscale-ui:8443 {
         transport http {
@@ -10,12 +10,17 @@ https://domain {
         }
     }
 
-    
     basicauth /admin* {
         username <password-hash>
     }
 
     reverse_proxy /admin* headscale-admin:80
-    
+
+    basicauth /headplane* {
+        username <password-hash>
+    }
+
+    reverse_proxy /headplane* http://headplane:3000
+
     reverse_proxy * http://headscale:8080
-}   
+}
