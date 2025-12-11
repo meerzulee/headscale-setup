@@ -16,11 +16,13 @@ https://domain {
 
     reverse_proxy /admin* headscale-admin:80
 
-    basicauth /headplane* {
-        username <password-hash>
+    handle_path /headplane* {
+        basicauth {
+            username <password-hash>
+        }
+        rewrite * /admin{uri}
+        reverse_proxy http://headplane:3000
     }
-
-    reverse_proxy /headplane* http://headplane:3000
 
     reverse_proxy * http://headscale:8080
 }

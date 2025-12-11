@@ -186,8 +186,7 @@ if [[ "$INSTALL_CADDY" = true ]]; then
                     CADDYFILE+="\n    reverse_proxy /admin* headscale-admin:80\n"
                     ;;
                 headplane)
-                    CADDYFILE+="\n    basicauth /headplane* {\n        ${USERNAME} ${PASSWORD_HASH}\n    }\n"
-                    CADDYFILE+="\n    reverse_proxy /headplane* http://headplane:3000\n"
+                    CADDYFILE+="\n    handle_path /headplane* {\n        basicauth {\n            ${USERNAME} ${PASSWORD_HASH}\n        }\n        rewrite * /admin{uri}\n        reverse_proxy http://headplane:3000\n    }\n"
                     ;;
             esac
         done
